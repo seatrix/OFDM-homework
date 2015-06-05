@@ -28,7 +28,7 @@ if __name__ == '__main__':
     SNR_db_fading, BER_fading = get_x_y("fading.csv")
     SNR_db_no_fading, BER_no_fading = get_x_y("no_fading.csv")
 
-    plt.title("误码率曲线")
+    plt.title("red for fading and noise, blue for noise only")
     plt.yscale("log")
     plt.plot(SNR_db_fading, BER_fading, 'r^-',
              SNR_db_no_fading, BER_no_fading, 'bo-')

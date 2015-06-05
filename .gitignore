@@ -33,3 +33,6 @@
 
 # Data files
 *.csv
+
+# picture
+pictures/

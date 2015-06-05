@@ -1,4 +1,4 @@
-#include "random.h"
+#include "librandom.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -6,7 +6,7 @@
 #include <math.h>
 
 
-void run(FILE *fp, int DB_MAX, int N, bool fading)
+void run(FILE *fp, int DB_MAX, unsigned long N, bool fading)
 {
     fprintf(fp, "SNR_db,BER\n");//csv文件的头部
     srand(time(NULL));
@@ -29,15 +29,15 @@ void run(FILE *fp, int DB_MAX, int N, bool fading)
     double BER[DB_MAX];
     for (int i = 0; i < DB_MAX; i++)
     {
-        int error = 0;
+        unsigned long error = 0;
         for (int j = 0; j < N; j++)
         {
             int b = gen_binomial_random(0.5);//0,1比特
             int in = (b == 1) ? 1 : -1;//输入
-            double r = (fading == true) ? gen_rayleigh_random() : 1;//瑞利衰落
+            double r = (fading == true) ? gen_rayleigh_random(1) : 1;//瑞利衰落
             double n = gen_normal_random(0, sqrt(var[i]));//高斯噪声
             double out = r * in + n;//输出
-            double v = (out > 0) ? 1: 0;//判决
+            double v = (out > 0) ? 1 : 0;//判决
             if (v != b)
                 error++;
         }
@@ -49,7 +49,7 @@ void run(FILE *fp, int DB_MAX, int N, bool fading)
 /*
  *开始仿真, 结果保存文件
  */
-void simulat(int DB_MAX, int N)
+void simulat(int DB_MAX, unsigned long N)
 {
     FILE *fp_no_fading = fopen("./no_fading.csv", "w+");//加噪声的结果文件
     FILE *fp_fading = fopen("./fading.csv", "w+");//加衰落和噪声的结果文件
@@ -73,8 +73,8 @@ void simulat(int DB_MAX, int N)
 
 int main(void)
 {
-    const int DB_MAX = 40;
-    const int N = 10000000;
+    const int DB_MAX = 41;
+    const unsigned long N = 10000000;
     simulat(DB_MAX, N);
     return 0;
 }

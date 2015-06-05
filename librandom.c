@@ -3,10 +3,11 @@
 
 /*
  *产生(0-1)均匀分布的随机数
+ *http://stackoverflow.com/questions/11641629/generating-a-uniform-distribution-of-integers-in-c
  */
-double gen_uniform_random()
+double gen_uniform_random(void)
 {
-    return (double)rand() / ( RAND_MAX);
+    return drand48();
 }
 
 
@@ -25,19 +26,19 @@ double gen_uniform_random()
  *f(x) = ( x / (a^2) ) * e^( -x^2 / (2*a^2) ) if x >=0 else 0
  *令 a=1
  */
-double gen_rayleigh_random()
+double gen_rayleigh_random(double sigma)
 {
     double v = gen_uniform_random();
-    return sqrt(-2 * log(v));
+    return sigma * sqrt(-2 * log(v));
 }
 
 /*
  *标准正态分布
  */
-double gen_standard_normal_random()
+double gen_standard_normal_random(void)
 {
     double u = gen_uniform_random();
-    return gen_rayleigh_random() * cos(M_PI * ( 2 * u - 1 ));
+    return gen_rayleigh_random(1) * cos(M_PI * ( 2 * u - 1 ));
 }
 
 /*
@@ -58,3 +59,4 @@ int gen_binomial_random(double p)
 {
     return gen_uniform_random() > p ? 1: 0;
 }
+
