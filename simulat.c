@@ -1,13 +1,11 @@
 #include "random.h"
 #include "simulat.h"
 
-#include <stdlib.h>
 #include <stdbool.h>
-#include <time.h>
 #include <math.h>
 
 void simulat_BPSK(const unsigned long N, const unsigned DB_MAX,
-        const bool fading, SNR_BER* SNR_BER_p)
+        const bool fading, Point* snr_ber_p)
 {
     /*先计算噪声标准差*/
     double sigma[DB_MAX];
@@ -34,20 +32,7 @@ void simulat_BPSK(const unsigned long N, const unsigned DB_MAX,
             if (recv != send)
                 error++;
         }
-        SNR_BER_p[i].SNR_db = i;
-        SNR_BER_p[i].BER    = (double)error / N;
+        snr_ber_p[i].SNR_db = i;
+        snr_ber_p[i].BER    = (double)error / N;
     }
-}
-
-int main(void)
-{
-    srand(time(NULL));
-
-    const unsigned long N = 10000000;
-    const unsigned DB_MAX = 41;
-    const bool fading     = true;
-    double  sigma[DB_MAX];
-    SNR_BER snr_ber[DB_MAX];
-    simulat_BPSK(N, DB_MAX, fading, snr_ber);
-    return 0;
 }

@@ -1,50 +1,8 @@
-#include "librandom.h"
+#include "simulat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
-#include <math.h>
-
-
-void run(FILE *fp, int DB_MAX, unsigned long N, bool fading)
-{
-    fprintf(fp, "SNR_db,BER\n");//csv文件的头部
-    srand(time(NULL));
-
-    /*
-     *信噪比从0db到DB_MAX,
-     *信号功率恒定且为1w,
-     *噪声功率为1/SRN_num, 即噪声方差.
-     */
-    double SNR_db[DB_MAX];
-    double SNR_num[DB_MAX];
-    double var[DB_MAX];
-    for (int i = 0; i < DB_MAX; i++)
-    {
-        SNR_db[i] = i;
-        SNR_num[i] = pow(10, SNR_db[i] / 10);
-        var[i] = 1 / SNR_num[i];
-    }
-
-    double BER[DB_MAX];
-    for (int i = 0; i < DB_MAX; i++)
-    {
-        unsigned long error = 0;
-        for (int j = 0; j < N; j++)
-        {
-            int b = gen_binomial_random(0.5);//0,1比特
-            int in = (b == 1) ? 1 : -1;//输入
-            double r = (fading == true) ? gen_rayleigh_random(1) : 1;//瑞利衰落
-            double n = gen_normal_random(0, sqrt(var[i]));//高斯噪声
-            double out = r * in + n;//输出
-            double v = (out > 0) ? 1 : 0;//判决
-            if (v != b)
-                error++;
-        }
-        BER[i] = (double)error / N;
-        fprintf(fp, "%d,%lf\n", i, BER[i]);
-    }
-}
 
 /*
  *开始仿真, 结果保存文件
@@ -63,9 +21,19 @@ void simulat(int DB_MAX, unsigned long N)
         printf("加衰落和噪声文件创建失败\n");
     }
 
-    run(fp_fading, DB_MAX, N, true);
-    run(fp_no_fading, DB_MAX, N, false);
+    srand(time(NULL));
 
+    Point snr_ber[DB_MAX];
+
+    simulat_BPSK(N, DB_MAX, true, snr_ber);
+    fprintf(fp_fading, "SNR_db,BER\n");
+    for (int i = 0; i < DB_MAX; i++)
+        fprintf(fp_fading, "%f,%f\n", snr_ber[i].SNR_db, snr_ber[i].BER);
+
+    simulat_BPSK(N, DB_MAX, false, snr_ber);
+    fprintf(fp_no_fading, "SNR_db,BER\n");
+    for (int i = 0; i < DB_MAX; i++)
+        fprintf(fp_no_fading, "%f,%f\n", snr_ber[i].SNR_db, snr_ber[i].BER);
 
     fclose(fp_fading);
     fclose(fp_no_fading);
