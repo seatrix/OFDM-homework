@@ -108,8 +108,8 @@ class TestBPSK(object):
         return SNR_db, BER
 
     class Point(Structure):
-        _fields_ = [ ("SNR_db", c_double),
-                     ("BER", c_double)]
+        _fields_ = [("SNR_db", c_double),
+                    ("BER", c_double)]
 
 
 
@@ -123,14 +123,14 @@ if __name__ == '__main__':
     #t.test_standard_normal_random()
     #t.test_normal_random(1, 2)
 
-    t = TestBPSK(10000000, 41, True)
-    SNR_db_fading, BER_fading = t.test_simulat_BPSK()
-    t.fading = False
-    SNR_db_no_fading, BER_no_fading = t.test_simulat_BPSK()
+    #t = TestBPSK(10000000, 41, True)
+    #SNR_db_fading, BER_fading = t.test_simulat_BPSK()
+    #t.fading = False
+    #SNR_db_no_fading, BER_no_fading = t.test_simulat_BPSK()
 
-    plt.title("red for fading and noise, blue for noise only")
-    plt.yscale("log")
-    plt.plot(SNR_db_fading, BER_fading, 'r^-',
-             SNR_db_no_fading, BER_no_fading, 'bo-')
-    plt.grid(True)
-    plt.show()
+    #plt.title("red for fading and noise, blue for noise only")
+    #plt.yscale("log")
+    #plt.plot(SNR_db_fading, BER_fading, 'r^-',
+    #         SNR_db_no_fading, BER_no_fading, 'bo-')
+    #plt.grid(True)
+    #plt.show()
