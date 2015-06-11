@@ -18,16 +18,6 @@ typedef struct Point {
  */
 
 void simulat_BPSK(const unsigned long N, const unsigned DB_MAX,
-        const bool fading, const double* sigma, Point* snr_ber_p);
-
-
-void simulat_QPSK(const unsigned long N, const unsigned DB_MAX,
-        const bool fading, const double* sigma, Point* snr_ber_p);
-
-/*注意参数是double**, 如果传入double*, 传入的是指针的副本, 
- * 函数体内改变指针指向的地址, 并不会反映到函数体外*/
-void init_sigma_array(double** sigma, int DB_MAX);
-
-void free_sigma_array(double* sigma);
+        const bool fading, Point* SNR_BER_p);
 
 #endif

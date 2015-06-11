@@ -36,3 +36,5 @@
 
 # picture
 pictures/
+
+__pycache__/
