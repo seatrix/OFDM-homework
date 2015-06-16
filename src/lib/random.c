@@ -7,7 +7,7 @@
  */
 double gen_uniform_random(void)
 {
-    return drand48();
+    return rand() / (RAND_MAX + 1.);
 }
 
 

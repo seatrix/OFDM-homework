@@ -2,7 +2,8 @@ from os.path import dirname
 from os.path import realpath, dirname
 from ctypes import CDLL, c_double, c_uint, c_ulong, c_bool, Structure, POINTER
 
-libc = CDLL(dirname(dirname(__file__)) + "/lib/libsimulat.so")
+libc = CDLL("libc.so.6")
+libsimulat = CDLL(dirname(dirname(__file__)) + "/lib/libsimulat.so")
 
 libc.srand(libc.time(None))
 

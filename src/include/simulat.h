@@ -24,12 +24,6 @@ typedef struct Parallel {
     ulong N;
 } Parallel;
 
-Serial* gen_signal(ulong N);
-void free_serial(Serial * serial);
-void add_noise(Serial * serial, double mean, double sigma);
-void add_noise_and_fading(Serial * serial, double n_mean,
-        double n_sigma, double r_sigma);
-Parallel* serial_to_parallel(Serial * serial, ushort M);
 void free_parallel(Parallel * parallel);
 double gen_uniform_random(void);
 double gen_rayleigh_random(double sigma);
@@ -37,6 +31,13 @@ double gen_standard_normal_random(void);
 double gen_normal_random(double mean, double sigma);
 int gen_binomial_random(double p);
 
+Serial* gen_signal(ulong N);
+void free_serial(Serial * serial);
+void add_noise(Serial * serial, double mean, double sigma);
+void add_noise_and_fading(Serial * serial, double n_mean,
+        double n_sigma, double r_sigma);
+Parallel* serial_to_parallel(Serial * serial, ushort M);
+Serial* parallel_to_serial(Parallel * parallel); //这里的并/串变换是是变换为基Parallel->M的数组, 不是基2的数组.
 
 /*
  *参数:

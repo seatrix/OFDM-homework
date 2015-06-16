@@ -1,6 +1,7 @@
 #include "simulat.h"
 
 #include <stdbool.h>
+#include <time.h>
 #include <stdlib.h>
 #include <complex.h>
 #include <math.h>
@@ -45,6 +46,7 @@ void simulat_BPSK(const ulong N, const ushort DB_MAX,
  */
 Serial* gen_signal(ulong N)
 {
+    srand(time(NULL));
     Serial* serial = (Serial*)malloc(sizeof(Serial));
     serial->N = N;
     serial->signal = (double*)malloc(sizeof(double) * N);
@@ -104,4 +106,17 @@ void free_parallel(Parallel * parallel)
         free(parallel->signal[n]);
     free(parallel->signal);
     free(parallel);
+}
+
+Serial* parallel_to_serial(Parallel * parallel)
+{
+    Serial* serial = (Serial*)malloc(sizeof(Serial));
+    serial->N = parallel->N;
+    serial->signal = (double*)malloc(sizeof(double) * serial->N);
+    for (ulong n = 0; n < parallel->N; n++) {
+        serial->signal[n] = 0;
+        for (ushort m = 0; m < parallel->M; m++)
+            serial->signal[n] += parallel->signal[n][m] * pow(2, m);
+    }
+    return serial;
 }
