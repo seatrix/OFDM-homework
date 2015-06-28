@@ -2,29 +2,42 @@
 #define SIMULAT_H
 
 #include <stdbool.h>
+#include <fftw3.h>
+#include <math.h>
 
 typedef unsigned long ulong;
-typedef unsigned short ushort;
 
 typedef struct Point {
     double SNR_db;
     double BER;
 } Point;
 
-/*串行*/
+/*串行序列*/
 typedef struct Serial {
     double * signal;
     ulong N;
 } Serial;
 
+/*串行序列, but存储的是复数*/
+typedef struct Serial_C {
+    fftw_complex * signal;
+    ulong N;
+} Serial_C;
+
 /*m路并行*/
 typedef struct Parallel {
     double ** signal;
-    ushort M;
+    ulong M;
     ulong N;
 } Parallel;
+/*m路并行, but存储的是复数*/
+typedef struct Parallel_C {
+    fftw_complex ** signal;
+    ulong M;
+    ulong N;
+} Parallel_C;
 
-void free_parallel(Parallel * parallel);
+
 double gen_uniform_random(void);
 double gen_rayleigh_random(double sigma);
 double gen_standard_normal_random(void);
@@ -32,12 +45,21 @@ double gen_normal_random(double mean, double sigma);
 int gen_binomial_random(double p);
 
 Serial* gen_signal(ulong N);
-void free_serial(Serial * serial);
+void bipolar(Serial* serial, double scale);
 void add_noise(Serial * serial, double mean, double sigma);
+void add_noise_c(Serial_C * serial_c, double mean, double sigma);
 void add_noise_and_fading(Serial * serial, double n_mean,
         double n_sigma, double r_sigma);
-Parallel* serial_to_parallel(Serial * serial, ushort M);
-Serial* parallel_to_serial(Parallel * parallel); //这里的并/串变换是是变换为基Parallel->M的数组, 不是基2的数组.
+void add_noise_and_fading_c(Serial_C * serial, double n_mean,
+        double n_sigma, double r_sigma);
+Parallel* serial_to_parallel(Serial * serial, ulong M);//因为要补零,所以没有加const
+Parallel_C* serial_to_parallel_c(Serial_C* serial, ulong M);
+Serial_C* parallel_to_serial_c(Parallel_C* parallel_c);
+Serial_C* QPSK(Serial* serial);
+Serial_C* QAM16(Serial* serial);
+void fft(Parallel_C* parallel_c);
+void ifft(Parallel_C* parallel_c);
+void transpose_array(Parallel* parallel);//转置一个实数矩阵
 
 /*
  *参数:
@@ -47,7 +69,7 @@ Serial* parallel_to_serial(Parallel * parallel); //这里的并/串变换是是�
  *    SNR_BER_p: 信噪比/误码率--作为返回值, 指向Point结构组成的数组
  */
 
-void simulat_BPSK(const ulong N, const ushort DB_MAX,
+void simulat_BPSK(const ulong N, const ulong DB_MAX,
         const bool fading, Point* SNR_BER_p);
 
 #endif
