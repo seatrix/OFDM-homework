@@ -47,40 +47,6 @@ static const double __13[2] = {-_x2, -_y1};
 static const double __14[2] = {-_x1, -_y2};
 static const double __15[2] = {-_x2, -_y2};
 
-
-void simulat_BPSK(const ulong N, const ulong DB_MAX,
-        const bool fading, Point* snr_ber_p)
-{
-    /*先计算噪声标准差*/
-    double sigma[DB_MAX];
-    for (int i = 0; i < DB_MAX; i++)
-    {
-        double SNR_db  = i;
-        double SNR_num = pow(10, SNR_db / 10);
-        double Eb      = 1;
-        double N0      = Eb / SNR_num;
-        double var     = N0 / 2;
-        sigma[i]       = sqrt(var);
-    }
-
-    /*加噪声和衰落*/
-    for (int i = 0; i < DB_MAX; i++) {
-        ulong error = 0;
-        for (int j = 0; j < N; j++) {
-            int send        = gen_binomial_random(0.5);
-            int in          = (send == 1) ? 1 : -1;
-            double rayleigh = (fading == true) ? gen_rayleigh_random(1) : 1;
-            double noise    = gen_normal_random(0, sigma[i]);
-            double out      = rayleigh * in + noise;
-            double recv     = (out > 0) ? 1 : 0;
-            if (recv != send)
-                error++;
-        }
-        snr_ber_p[i].SNR_db = i;
-        snr_ber_p[i].BER    = (double)error / N;
-    }
-}
-
 /*
  *产生0,1比特
  */
@@ -216,17 +182,18 @@ Serial_C* parallel_to_serial_c(Parallel_C* parallel_c)
 /*每个bit的能量是1, 则每个符号的能量是2, 所以模是sqrt(2)*/
 Serial_C* QPSK(Serial* serial)
 {
+    if (serial->N % 2 != 0) {
+        serial->N++;
+        serial->signal = (double*)realloc(serial->signal, sizeof(double) * serial->N);
+        serial->signal[serial->N - 1] = 0;
+    }
     Serial_C* serial_c = (Serial_C*)malloc(sizeof(Serial_C));
-    serial_c->N = (serial_c->N % 2 == 0) ? serial_c->N : serial->N + 2 - serial->N % 2;
+    serial_c->N = serial->N / 2;
     serial_c->signal = (fftw_complex*)malloc(sizeof(fftw_complex) * serial_c->N);
-    for (ulong n = 0; n < serial_c->N; n++)
-        for (ulong m = 0; m < 2; m++) {
-            if (n * 2 + m < serial->N)
-                serial_c->signal[n][m] = serial->signal[n * 2 + m];
-            else
-                serial_c->signal[n][m] = 0;
-        }
-
+    for (ulong n = 0; n < serial_c->N; n++) {
+        serial_c->signal[n][0] = (serial->signal[2 * n] == 1) ? 1 : -1;
+        serial_c->signal[n][1] = (serial->signal[2 * n + 1] == 1) ? 1 : -1;
+    }
     return serial_c;
 }
 
@@ -236,8 +203,8 @@ Serial* rQPSK(Serial_C* serial_c)
     serial->N = serial_c->N * 2;
     serial->signal = (double*)malloc(sizeof(double) * serial->N);
     for (ulong n = 0; n < serial_c->N; n++) {
-        serial->signal[2 * n] = serial_c->signal[n][0];
-        serial->signal[2 * n + 1] = serial_c->signal[n][1];
+        serial->signal[2 * n] = (serial_c->signal[n][0] == 1) ? 1 : 0;
+        serial->signal[2 * n + 1] = (serial_c->signal[n][1] == 1) ? 1: 0;
     }
     return serial;
 }
@@ -301,7 +268,7 @@ static double min_d(double a, double es[], int N)
     for (int i = 1; i < N; i++)
         if (d[i] < dmin) { dmin = d[i]; j = i; }
     free(d);
-    return j;
+    return es[j];
 }
 
 /*判决*/
@@ -314,45 +281,79 @@ void judge4QAM16(Serial_C* serial_c)
     }
 }
 
+void judge4QPSK(Serial_C* serial_c)
+{
+    double es[2] = {-1, 1};
+    for (ulong n = 0; n < serial_c->N; n++) {
+        serial_c->signal[n][0] = min_d(serial_c->signal[n][0], es, 2);
+        serial_c->signal[n][1] = min_d(serial_c->signal[n][1], es, 2);
+    }
+}
+
+void judge4BPSK(Serial* serial)
+{
+    double es[2] = {-1, 1};
+    for (ulong n = 0; n < serial->N; n++)
+        serial->signal[n] = min_d(serial->signal[n], es, 2);
+}
+
+Serial* BPSK(Serial* serial)
+{
+    Serial* rev = (Serial*)malloc(sizeof(Serial));
+    rev->signal = (double*)malloc(sizeof(double) * serial->N);
+    rev->N = serial->N;
+    for (ulong n = 0; n < serial->N; n++)
+        rev->signal[n] = (serial->signal[n] == 1) ? 1 : -1;
+    return rev;
+}
+
+Serial* rBPSK(Serial* serial)
+{
+    for (ulong n = 0; n < serial->N; n++)
+        serial->signal[n] = (serial->signal[n] == 1) ? 1 : 0;
+    return serial;
+}
+
 Serial* rQAM16(Serial_C* serial_c)
 {
-    judge4QAM16(serial_c);
     Serial* serial = (Serial*)malloc(sizeof(Serial));
-    serial->N = serial_c->N * 2;
+    if (serial == NULL) exit(-1);
+    serial->N = serial_c->N * 4;
     serial->signal = (double*)malloc(sizeof(double) * serial->N);
+    if (serial->signal == NULL) exit(-1);
     for (ulong n =  0; n < serial_c->N; n++) {
-        if (memcmp(serial_c->signal[n], __0, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _0, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __1, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _1, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __2, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _2, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __3, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _3, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __4, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _4, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __5, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _5, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __6, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _6, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __7, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _7, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __8, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _8, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __9, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _9, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __10, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _10, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __11, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _11, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __12, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _12, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __13, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _13, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __14, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _14, sizeof(double) * 4);
-        else if (memcmp(serial_c->signal[n], __15, sizeof(double) * 2))
-            memcpy(&serial->signal[4 * n], _15, sizeof(double) * 4);
+        if (memcmp(serial_c->signal[n], __0, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _0, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __1, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _1, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __2, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _2, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __3, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _3, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __4, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _4, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __5, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _5, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __6, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _6, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __7, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _7, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __8, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _8, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __9, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _9, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __10, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _10, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __11, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _11, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __12, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _12, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __13, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _13, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __14, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _14, sizeof(double [4]));
+        else if (memcmp(serial_c->signal[n], __15, sizeof(double [2])) ==0)
+            memcpy(&serial->signal[4 * n], _15, sizeof(double [4]));
         else
             exit(-1);
     }

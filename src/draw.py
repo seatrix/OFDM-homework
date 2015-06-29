@@ -2,6 +2,7 @@
 绘出误码率/信噪比曲线
 """
 
+import sys
 import csv
 import matplotlib.pyplot as plt
 import matplotlib.pylab as plb
@@ -25,12 +26,11 @@ def get_x_y(result_file):
 
 
 if __name__ == '__main__':
-    SNR_db_fading, BER_fading = get_x_y("fading.csv")
-    SNR_db_no_fading, BER_no_fading = get_x_y("no_fading.csv")
-
-    plt.title("red for fading and noise, blue for noise only")
-    plt.yscale("log")
-    plt.plot(SNR_db_fading, BER_fading, 'r^-',
-             SNR_db_no_fading, BER_no_fading, 'bo-')
+    files = sys.argv[1:]
+    for file in files:
+        SNR_db, BER = get_x_y(file)
+        plt.title("")
+        plt.yscale("log")
+        plt.plot(SNR_db, BER, 'r^-')
     plt.grid(True)
     plt.show()

@@ -56,23 +56,17 @@ Parallel_C* serial_to_parallel_c(Serial_C* serial, ulong M);
 Serial_C* parallel_to_serial_c(Parallel_C* parallel_c);
 void add_cycle_prefix(Parallel_C* parallel_c);
 void del_cycle_prefix(Parallel_C* parallel_c);
+Serial* BPSK(Serial* serial);
+Serial* rBPSK(Serial* serial);
 Serial_C* QPSK(Serial* serial);
 Serial* rQPSK(Serial_C* serial_c);
 Serial_C* QAM16(Serial* serial);
 Serial* rQAM16(Serial_C* serial_c);
+void judge4QAM16(Serial_C* serial_c);
+void judge4QPSK(Serial_C* serial_c);
+void judge4BPSK(Serial* serial);
 void fft(Parallel_C* parallel_c);
 void ifft(Parallel_C* parallel_c);
 void transpose_array(Parallel* parallel);//转置一个实数矩阵
-
-/*
- *参数:
- *    N:         产生的信号比特数
- *    DB_MAX:    SNR_db最大值
- *    fading:    是否添加瑞利衰落
- *    SNR_BER_p: 信噪比/误码率--作为返回值, 指向Point结构组成的数组
- */
-
-void simulat_BPSK(const ulong N, const ulong DB_MAX,
-        const bool fading, Point* SNR_BER_p);
 
 #endif
