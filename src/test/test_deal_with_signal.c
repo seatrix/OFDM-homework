@@ -37,6 +37,14 @@ int main(void)
         printf("\n\n");
     }
 
+    printf("==========加循环前缀==========\n");
+    add_cycle_prefix(parallel_c);
+    for (ulong n = 0; n < parallel_c->N; n++) {
+        for (ulong m = 0; m < parallel_c->M; m++)
+            printf("%g + %gj\n", parallel_c->signal[n][m][0], parallel_c->signal[n][m][1]);
+        printf("\n\n");
+    }
+
     printf("==========并串变换==========\n");
     Serial_C* serial_c_1 = parallel_to_serial_c(parallel_c);
     for (ulong n= 0; n < serial_c_1->N; n++)
@@ -55,6 +63,14 @@ int main(void)
         printf("\n\n");
     }
 
+    printf("==========去循环前缀==========\n");
+    del_cycle_prefix(parallel_c);
+    for (ulong n = 0; n < parallel_c->N; n++) {
+        for (ulong m = 0; m < parallel_c->M; m++)
+            printf("%g + %gj\n", parallel_c->signal[n][m][0], parallel_c->signal[n][m][1]);
+        printf("\n\n");
+    }
+
     printf("==========fft==========\n");
     fft(parallel_c_1);
     for (ulong n = 0; n < parallel_c->N; n++) {
@@ -69,6 +85,16 @@ int main(void)
         printf("%g + %gj\n", serial_c_2->signal[n][0], serial_c_2->signal[n][1]);
 
 
+    printf("==========r16QAM==========\n");
+    Serial* serial_3 = rQAM16(serial_c);
+    for (ulong n = 0; n < N; n++) {
+        printf("%g\t", serial->signal[n]);
+        if ((n + 1) % M == 0)
+            printf("\n");
+    }
+
+
+    free(serial_3);
     free(serial_c_2);
     free(parallel_c_1);
     free(serial_c_1);

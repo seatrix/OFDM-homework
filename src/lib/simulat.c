@@ -1,11 +1,51 @@
 #include "simulat.h"
-
 #include <stdbool.h>
 #include <time.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <fftw3.h>
+
+/*16QAM星座图*/
+static const double _0[4]  = {0, 0, 0, 0};
+static const double _1[4]  = {0, 0, 0, 1};
+static const double _2[4]  = {0, 0, 1, 0};
+static const double _3[4]  = {0, 0, 1, 1};
+static const double _4[4]  = {0, 1, 0, 0};
+static const double _5[4]  = {0, 1, 0, 1};
+static const double _6[4]  = {0, 1, 1, 0};
+static const double _7[4]  = {0, 1, 1, 1};
+static const double _8[4]  = {1, 0, 0, 0};
+static const double _9[4]  = {1, 0, 0, 1};
+static const double _10[4] = {1, 0, 1, 0};
+static const double _11[4] = {1, 0, 1, 1};
+static const double _12[4] = {1, 1, 0, 0};
+static const double _13[4] = {1, 1, 0, 1};
+static const double _14[4] = {1, 1, 1, 0};
+static const double _15[4] = {1, 1, 1, 1};
+
+/*每个bit的能量是1, 则每个符号的能量是4, 采用方形16QAM, 则振幅分别可以选为1/3 2/3 1*/
+#define _x1 1
+#define _x2 1.7320508075688772
+#define _y1 1
+#define _y2 1.7320508075688772
+
+static const double __0[2]  = {_x1,   _y1};
+static const double __1[2]  = {_x2,   _y1};
+static const double __2[2]  = {_x1,   _y2};
+static const double __3[2]  = {_x2,   _y2};
+static const double __4[2]  = {_x1,  -_y1};
+static const double __5[2]  = {_x1,  -_y2};
+static const double __6[2]  = {_x2,  -_y1};
+static const double __7[2]  = {_x2,  -_y2};
+static const double __8[2]  = {-_x1,  _y1};
+static const double __9[2]  = {-_x1,  _y2};
+static const double __10[2] = {-_x2,  _y1};
+static const double __11[2] = {-_x2,  _y2};
+static const double __12[2] = {-_x1, -_y1};
+static const double __13[2] = {-_x2, -_y1};
+static const double __14[2] = {-_x1, -_y2};
+static const double __15[2] = {-_x2, -_y2};
 
 
 void simulat_BPSK(const ulong N, const ulong DB_MAX,
@@ -138,6 +178,32 @@ Parallel_C* serial_to_parallel_c(Serial_C* serial_c, ulong M)
     return parallel_c;
 }
 
+void add_cycle_prefix(Parallel_C* parallel_c)
+{
+    /*
+    设计时使用的一维连续数组代表二维数组, 现在无法改变子数组宽度, 先注释掉
+    ulong nsize = parallel_c->M * (1 + 0.25);
+    for (ulong n = 0; n < parallel_c->N; n++) {
+        parallel_c->signal[n] = (fftw_complex*)realloc(parallel_c->signal[n], sizeof(fftw_complex) * nsize);
+        for (ulong m = parallel_c->M; m < nsize; m++) {
+            parallel_c->signal[n][m][0] = parallel_c->signal[n][m - nsize][0];
+            parallel_c->signal[n][m][1] = parallel_c->signal[n][m - nsize][0];
+        }
+    }
+    parallel_c->M = nsize;
+    */
+}
+
+void del_cycle_prefix(Parallel_C* parallel_c)
+{
+    /*
+    ulong nsize = parallel_c->M / (1 + 0.25);
+    for (ulong n = 0; n < parallel_c->N; n++)
+        parallel_c->signal[n] = (fftw_complex*)realloc(parallel_c->signal[n], sizeof(fftw_complex) * nsize);
+    parallel_c->M = nsize;
+    */
+}
+
 Serial_C* parallel_to_serial_c(Parallel_C* parallel_c)
 {
     Serial_C* serial_c = (Serial_C*)malloc(sizeof(Serial_C));
@@ -166,7 +232,14 @@ Serial_C* QPSK(Serial* serial)
 
 Serial* rQPSK(Serial_C* serial_c)
 {
-    
+    Serial* serial = (Serial*)malloc(sizeof(Serial));
+    serial->N = serial_c->N * 2;
+    serial->signal = (double*)malloc(sizeof(double) * serial->N);
+    for (ulong n = 0; n < serial_c->N; n++) {
+        serial->signal[2 * n] = serial_c->signal[n][0];
+        serial->signal[2 * n + 1] = serial_c->signal[n][1];
+    }
+    return serial;
 }
 
 Serial_C* QAM16(Serial* serial)
@@ -177,84 +250,40 @@ Serial_C* QAM16(Serial* serial)
     serial_c->N = parallel4->N;
     serial_c->signal = (fftw_complex*)malloc(sizeof(fftw_complex) * serial_c->N);
 
-
-    /*16QAM星座图*/
-    /*瞄了咪的, 下面这段赋值在头文件中不行, 改到函数中就可以了*/
-    const double _0[4]  = {0, 0, 0, 0};
-    const double _1[4]  = {0, 0, 0, 1};
-    const double _2[4]  = {0, 0, 1, 0};
-    const double _3[4]  = {0, 0, 1, 1};
-    const double _4[4]  = {0, 1, 0, 0};
-    const double _5[4]  = {0, 1, 0, 1};
-    const double _6[4]  = {0, 1, 1, 0};
-    const double _7[4]  = {0, 1, 1, 1};
-    const double _8[4]  = {1, 0, 0, 0};
-    const double _9[4]  = {1, 0, 0, 1};
-    const double _10[4] = {1, 0, 1, 0};
-    const double _11[4] = {1, 0, 1, 1};
-    const double _12[4] = {1, 1, 0, 0};
-    const double _13[4] = {1, 1, 0, 1};
-    const double _14[4] = {1, 1, 1, 0};
-    const double _15[4] = {1, 1, 1, 1};
-
-    /*每个bit的能量是1, 则每个符号的能量是4, 采用方形16QAM, 则振幅分别可以选为1/3 2/3 1*/
-    const double _x1 = 1;
-    const double _x2 = sqrt(3);
-    const double _y1 = 1;
-    const double _y2 = sqrt(3);
-
-    const double __0[2]  = {_x1,   _y1};
-    const double __1[2]  = {_x2,   _y1};
-    const double __2[2]  = {_x1,   _y2};
-    const double __3[2]  = {_x2,   _y2};
-    const double __4[2]  = {_x1,  -_y1};
-    const double __5[2]  = {_x1,  -_y2};
-    const double __6[2]  = {_x2,  -_y1};
-    const double __7[2]  = {_x2,  -_y2};
-    const double __8[2]  = {-_x1,  _y1};
-    const double __9[2]  = {-_x1,  _y2};
-    const double __10[2] = {-_x2,  _y1};
-    const double __11[2] = {-_x2,  _y2};
-    const double __12[2] = {-_x1, -_y1};
-    const double __13[2] = {-_x2, -_y1};
-    const double __14[2] = {-_x1, -_y2};
-    const double __15[2] = {-_x2, -_y2};
-
-
     for (ulong n = 0; n < serial_c->N; n++) {
         /*fuck C, 不能switch 数组!*/
-        if (memcmp(parallel4->signal[n], &_0 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__0, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_1 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__1, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_2 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__2, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_3 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__3, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_4 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__4, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_5 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__5, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_6 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__6, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_7 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__7, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_8 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__8, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_9 , sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__9, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_10, sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__10, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_11, sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__11, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_12, sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__12, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_13, sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__13, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_14, sizeof(double) * 4) == 0) 
-            memcpy(serial_c->signal[n], &__14, sizeof(double) * 2);
-        else if (memcmp(parallel4->signal[n], &_15, sizeof(double) * 4) == 0)
-            memcpy(serial_c->signal[n], &__15, sizeof(double) * 2);
+        if (memcmp(parallel4->signal[n], _0 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __0, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _1 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __1, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _2 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __2, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _3 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __3, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _4 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __4, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _5 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __5, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _6 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __6, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _7 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __7, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _8 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __8, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _9 , sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __9, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _10, sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __10, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _11, sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __11, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _12, sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __12, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _13, sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __13, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _14, sizeof(double) * 4) == 0) 
+            memcpy(serial_c->signal[n], __14, sizeof(double) * 2);
+        else if (memcmp(parallel4->signal[n], _15, sizeof(double) * 4) == 0)
+            memcpy(serial_c->signal[n], __15, sizeof(double) * 2);
         else 
             exit(-1);
     }
@@ -263,9 +292,71 @@ Serial_C* QAM16(Serial* serial)
     return serial_c;
 }
 
+/*离谁的距离最小*/
+static double min_d(double a, double es[], int N)
+{
+    double *d = (double*)malloc(sizeof(double) * N);
+    for (int i = 0; i < N; i++) d[i] = fabs(a - es[i]);
+    double dmin = d[0]; int j = 0;
+    for (int i = 1; i < N; i++)
+        if (d[i] < dmin) { dmin = d[i]; j = i; }
+    free(d);
+    return j;
+}
+
+/*判决*/
+void judge4QAM16(Serial_C* serial_c)
+{
+    double es[4] = {-_x2, -_x1, _x1, _x2};
+    for (ulong n = 0; n < serial_c->N; n++) {
+        serial_c->signal[n][0] = min_d(serial_c->signal[n][0], es, 4);
+        serial_c->signal[n][1] = min_d(serial_c->signal[n][1], es, 4);
+    }
+}
+
 Serial* rQAM16(Serial_C* serial_c)
 {
-
+    judge4QAM16(serial_c);
+    Serial* serial = (Serial*)malloc(sizeof(Serial));
+    serial->N = serial_c->N * 2;
+    serial->signal = (double*)malloc(sizeof(double) * serial->N);
+    for (ulong n =  0; n < serial_c->N; n++) {
+        if (memcmp(serial_c->signal[n], __0, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _0, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __1, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _1, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __2, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _2, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __3, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _3, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __4, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _4, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __5, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _5, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __6, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _6, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __7, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _7, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __8, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _8, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __9, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _9, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __10, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _10, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __11, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _11, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __12, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _12, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __13, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _13, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __14, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _14, sizeof(double) * 4);
+        else if (memcmp(serial_c->signal[n], __15, sizeof(double) * 2))
+            memcpy(&serial->signal[4 * n], _15, sizeof(double) * 4);
+        else
+            exit(-1);
+    }
+    return serial;
 }
 
 static void transform(Parallel_C* parallel_c, int forward)

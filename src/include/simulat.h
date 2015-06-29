@@ -37,7 +37,6 @@ typedef struct Parallel_C {
     ulong N;
 } Parallel_C;
 
-
 double gen_uniform_random(void);
 double gen_rayleigh_random(double sigma);
 double gen_standard_normal_random(void);
@@ -55,8 +54,12 @@ void add_noise_and_fading_c(Serial_C * serial, double n_mean,
 Parallel* serial_to_parallel(Serial * serial, ulong M);//因为要补零,所以没有加const
 Parallel_C* serial_to_parallel_c(Serial_C* serial, ulong M);
 Serial_C* parallel_to_serial_c(Parallel_C* parallel_c);
+void add_cycle_prefix(Parallel_C* parallel_c);
+void del_cycle_prefix(Parallel_C* parallel_c);
 Serial_C* QPSK(Serial* serial);
+Serial* rQPSK(Serial_C* serial_c);
 Serial_C* QAM16(Serial* serial);
+Serial* rQAM16(Serial_C* serial_c);
 void fft(Parallel_C* parallel_c);
 void ifft(Parallel_C* parallel_c);
 void transpose_array(Parallel* parallel);//转置一个实数矩阵
