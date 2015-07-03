@@ -65,6 +65,7 @@ Serial* rQAM16(Serial_C* serial_c);
 void judge4QAM16(Serial_C* serial_c);
 void judge4QPSK(Serial_C* serial_c);
 void judge4BPSK(Serial* serial);
+void scale(Parallel_C* parallel_c);
 void fft(Parallel_C* parallel_c);
 void ifft(Parallel_C* parallel_c);
 void transpose_array(Parallel* parallel);//转置一个实数矩阵

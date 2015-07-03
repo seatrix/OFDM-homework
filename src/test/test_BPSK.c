@@ -30,7 +30,7 @@ void simulat_BPSK(FILE* fp, ulong N, ulong M, int db, bool fading)
 
     printf("==========加高斯噪声(和衰落)==========\n");
     if (fading)
-        add_noise_and_fading(serial_1, 0, sigma, 1);
+        add_noise_and_fading(serial_1, 0, sigma, 0.5);
     else
         add_noise(serial_1, 0, sigma);
 
@@ -66,7 +66,7 @@ void simulat_BPSK(FILE* fp, ulong N, ulong M, int db, bool fading)
     for (ulong n = 0; n < serial->N; n++)
         if (serial->signal[n] != serial_1->signal[n])
             e++;
-    fprintf(fp, "%d,%0.7f\n", db, (double)e/N);
+    fprintf(fp, "%d,%lf\n", db, (double)e/N);
 
 
     free(serial_1->signal);
@@ -78,7 +78,7 @@ void simulat_BPSK(FILE* fp, ulong N, ulong M, int db, bool fading)
 int main(void)
 {
     FILE* fp;
-    const ulong N = 1000000;
+    const ulong N = 10000000;
     const ulong M = 16;
     const int DB_MAX = 41;
 

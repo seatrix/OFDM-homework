@@ -6,29 +6,29 @@
 #include <string.h>
 #include <fftw3.h>
 
-/*16QAM星座图*/
+/*16QAM星座图，采用格雷编码*/
 static const double _0[4]  = {0, 0, 0, 0};
 static const double _1[4]  = {0, 0, 0, 1};
 static const double _2[4]  = {0, 0, 1, 0};
 static const double _3[4]  = {0, 0, 1, 1};
 static const double _4[4]  = {0, 1, 0, 0};
-static const double _5[4]  = {0, 1, 0, 1};
-static const double _6[4]  = {0, 1, 1, 0};
+static const double _5[4]  = {0, 1, 1, 0};
+static const double _6[4]  = {0, 1, 0, 1};
 static const double _7[4]  = {0, 1, 1, 1};
 static const double _8[4]  = {1, 0, 0, 0};
-static const double _9[4]  = {1, 0, 0, 1};
-static const double _10[4] = {1, 0, 1, 0};
+static const double _9[4]  = {1, 0, 1, 0};
+static const double _10[4] = {1, 0, 0, 1};
 static const double _11[4] = {1, 0, 1, 1};
 static const double _12[4] = {1, 1, 0, 0};
 static const double _13[4] = {1, 1, 0, 1};
 static const double _14[4] = {1, 1, 1, 0};
 static const double _15[4] = {1, 1, 1, 1};
 
-/*每个bit的能量是1, 则每个符号的能量是4, 采用方形16QAM, 则振幅分别可以选为1/3 2/3 1*/
-#define _x1 1
-#define _x2 1.7320508075688772
-#define _y1 1
-#define _y2 1.7320508075688772
+/*每个bit的能量是1, 则每个符号的能量是4, 采用方形16QAM*/
+#define _x1 0.6324555320336759
+#define _x2 1.8973665961010275
+#define _y1 _x1
+#define _y2 _x2
 
 static const double __0[2]  = {_x1,   _y1};
 static const double __1[2]  = {_x2,   _y1};
@@ -373,14 +373,19 @@ static void transform(Parallel_C* parallel_c, int forward)
     fftw_destroy_plan(p);
 }
 
+/*fftw3库的ifft没有乘scale=1/M*/
+void scale(Parallel_C* parallel_c)
+{
+    for (ulong n = 0; n < parallel_c->N; n++)
+        for (ulong m = 0; m < parallel_c->M; m++) {
+            parallel_c->signal[n][m][0] /= parallel_c->M;
+            parallel_c->signal[n][m][1] /= parallel_c->M;
+        }
+}
+
 void ifft(Parallel_C* parallel_c)
 {
     transform(parallel_c, 1);
-    for (ulong n = 0; n < parallel_c->N; n++)
-        for (ulong m = 0; m < parallel_c->M; m++) {
-            parallel_c->signal[n][m][0] /= 16;
-            parallel_c->signal[n][m][1] /= 16;
-        }
 }
 
 void fft(Parallel_C* parallel_c)

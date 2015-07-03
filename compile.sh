@@ -26,6 +26,13 @@ gcc ${src_dir}/test/test_QPSK.c ${src_dir}/lib/{simulat.c,random.c} \
     -Wall \
     -o ${build_dir}/qpsk
 
+gcc ${src_dir}/test/test_16QAM.c ${src_dir}/lib/{simulat.c,random.c} \
+    -I ${src_dir}/include \
+    -lm \
+    -lfftw3 \
+    -Wall \
+    -o ${build_dir}/16qam
+
 gcc ${src_dir}/test/test_OFDM.c ${src_dir}/lib/{simulat.c,random.c}  \
     -I ${src_dir}/include \
     -lm \

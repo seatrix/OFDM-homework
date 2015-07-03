@@ -25,12 +25,13 @@ void simulat_OFDM(FILE* fp, ulong N, ulong M, int db, bool fading)
     Parallel_C* parallel_c = serial_to_parallel_c(serial_c, M);
     for (ulong n = 0; n < parallel_c->N; n++) {
         for (ulong m = 0; m < parallel_c->M; m++)
-            printf("%g + %gj,", parallel_c->signal[n][m][0], parallel_c->signal[n][m][1]);
-        printf("\n\n");
+            printf("%g + %gj\n", parallel_c->signal[n][m][0], parallel_c->signal[n][m][1]);
     }
+
 
     printf("==========ifft==========\n");
     ifft(parallel_c);
+    scale(parallel_c);
     for (ulong n = 0; n < parallel_c->N; n++) {
         for (ulong m = 0; m < parallel_c->M; m++)
             printf("%g + %gj\n", parallel_c->signal[n][m][0], parallel_c->signal[n][m][1]);
@@ -50,9 +51,10 @@ void simulat_OFDM(FILE* fp, ulong N, ulong M, int db, bool fading)
     for (ulong n= 0; n < serial_c_1->N; n++)
         printf("%g + %gj\n", serial_c_1->signal[n][0], serial_c_1->signal[n][1]);
 
+
     printf("==========加高斯噪声(和衰落)==========\n");
     if (fading)
-        add_noise_and_fading_c(serial_c, 0, sigma, 1);
+        add_noise_and_fading_c(serial_c_1, 0, sigma, 0.5);
     else
         add_noise_c(serial_c_1, 0, sigma);
     for (ulong n= 0; n < serial_c_1->N; n++)
@@ -62,28 +64,28 @@ void simulat_OFDM(FILE* fp, ulong N, ulong M, int db, bool fading)
     Parallel_C* parallel_c_1 = serial_to_parallel_c(serial_c_1, M);
     for (ulong n = 0; n < parallel_c_1->N; n++) {
         for (ulong m = 0; m < parallel_c_1->M; m++)
-            printf("%g + %gj,", parallel_c_1->signal[n][m][0], parallel_c_1->signal[n][m][1]);
-        printf("\n\n");
+            printf("%g + %gj\n", parallel_c_1->signal[n][m][0], parallel_c_1->signal[n][m][1]);
     }
 
     printf("==========去循环前缀==========\n");
     del_cycle_prefix(parallel_c_1);
-    for (ulong n = 0; n < parallel_c->N; n++) {
-        for (ulong m = 0; m < parallel_c->M; m++)
-            printf("%g + %gj\n", parallel_c->signal[n][m][0], parallel_c->signal[n][m][1]);
+    for (ulong n = 0; n < parallel_c_1->N; n++) {
+        for (ulong m = 0; m < parallel_c_1->M; m++)
+            printf("%g + %gj\n", parallel_c_1->signal[n][m][0], parallel_c_1->signal[n][m][1]);
         printf("\n\n");
     }
 
     printf("==========fft==========\n");
     fft(parallel_c_1);
-    for (ulong n = 0; n < parallel_c->N; n++) {
-        for (ulong m = 0; m < parallel_c->M; m++)
-            printf("%g + %gj\n", parallel_c->signal[n][m][0], parallel_c->signal[n][m][1]);
+    for (ulong n = 0; n < parallel_c_1->N; n++) {
+        for (ulong m = 0; m < parallel_c_1->M; m++)
+            printf("%g + %gj\n", parallel_c_1->signal[n][m][0], parallel_c_1->signal[n][m][1]);
         printf("\n\n");
     }
 
+
     printf("==========并串变换==========\n");
-    Serial_C* serial_c_2 = parallel_to_serial_c(parallel_c);
+    Serial_C* serial_c_2 = parallel_to_serial_c(parallel_c_1);
     for (ulong n = 0; n < serial_c_2->N; n++)
         printf("%g + %gj\n", serial_c_2->signal[n][0], serial_c_2->signal[n][1]);
 
@@ -93,7 +95,7 @@ void simulat_OFDM(FILE* fp, ulong N, ulong M, int db, bool fading)
         printf("%g + %gj\n", serial_c_2->signal[n][0], serial_c_2->signal[n][1]);
 
     printf("==========r16QAM==========\n");
-    Serial* serial_3 = rQAM16(serial_c);
+    Serial* serial_3 = rQAM16(serial_c_2);
     for (ulong n = 0; n < N; n++) {
         printf("%g\t", serial_3->signal[n]);
         if ((n + 1) % M == 0)
@@ -106,7 +108,7 @@ void simulat_OFDM(FILE* fp, ulong N, ulong M, int db, bool fading)
     for (ulong n = 0; n < serial->N; n++)
         if (serial->signal[n] != serial_3->signal[n])
             e++;
-    fprintf(fp, "%d,%0.7f\n", db, (double)e/N);
+    fprintf(fp, "%d,%lf\n", db, (double)e/N);
 
 
     free(serial_3->signal);
@@ -126,7 +128,7 @@ void simulat_OFDM(FILE* fp, ulong N, ulong M, int db, bool fading)
 int main(void)
 {
     FILE *fp;
-    const ulong N = 1000000;
+    const ulong N = 10000000;
     const ulong M = 16;
     const int DB_MAX = 41;
     if ((fp = fopen("ofdm_no_fading.csv", "w+")) != NULL) {
